@@ -4,9 +4,10 @@ eslint-config-prettier,npm,9.1.1,MAL-2025-6022,https://www.bleepingcomputer.com/
 eslint-config-prettier,npm,10.1.6,MAL-2025-6022,https://www.bleepingcomputer.com/news/security/popular-npm-linter-packages-hijacked-via-phishing-to-drop-malware/
 eslint-config-prettier,npm,10.1.7,MAL-2025-6022,https://www.bleepingcomputer.com/news/security/popular-npm-linter-packages-hijacked-via-phishing-to-drop-malware/
 
-| rex field=targetfilename "(?i)node[_-]modules[\\\\/](?:@(?<scope>[^\\\\/]+)[\\\\/])?(?<pkg>[^\\\\/]+)"
-| eval npm_pkg=lower(if(isnotnull(scope), "@"+scope+"/"+pkg, pkg))
-
 | rex max_match=0 field=targetfilename "(?i)node[_-]modules[\\\\/](?:@(?<scope>[^\\\\/]+)[\\\\/])?(?<pkg>[^\\\\/]+)"
 | eval npm_pkg=if(isnotnull(mvindex(scope,-1)), "@"+mvindex(scope,-1)+"/"+mvindex(pkg,-1), mvindex(pkg,-1))
 | eval npm_pkg=lower(npm_pkg)
+| lookup mal_npm_packages package as npm_pkg OUTPUT id reference ecosystem
+| where isnotnull(id)
+| eval detection="Malicious NPM package detected (OSVF/OSSF lookup)"
+| table _time host user targetfilename npm_pkg id ecosystem reference detection
