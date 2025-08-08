@@ -5,13 +5,10 @@ eslint-config-prettier,npm,10.1.6,MAL-2025-6022,https://www.bleepingcomputer.com
 eslint-config-prettier,npm,10.1.7,MAL-2025-6022,https://www.bleepingcomputer.com/news/security/popular-npm-linter-packages-hijacked-via-phishing-to-drop-malware/
 
 <seu_base_search_que_tem_targetfilename>
-| rex field=targetfilename "(?i)(?<pkg>@?[a-z0-9._-]+(?:\/[a-z0-9._-]+)?)\-(?<ver>\d+\.\d+\.\d+)(?:[^\\/]*)"
-| eval pkg=lower(pkg), ver=lower(ver)
-| lookup mal_npm_packages package as pkg version as ver OUTPUT id reference
+| rex field=targetfilename "(?i).*[\\/]node_modules[\\/](?:@(?<scope>[a-z0-9._-]+)[\\/])?(?<pkg>[a-z0-9._-]+)"
+| eval npm_pkg=if(isnotnull(scope), "@"+scope+"/"+pkg, pkg)
+| eval npm_pkg=lower(npm_pkg)
+| lookup mal_npm_packages package as npm_pkg OUTPUT id reference
 | where isnotnull(id)
-| table _time host user targetfilename pkg ver id reference
-
-| rex field=targetfilename "(?i)[\\/]node_modules[\\/]?(?<pkg>@?[a-z0-9._-]+(?:\/[a-z0-9._-]+)?)"
-| eval pkg=lower(pkg)
-| lookup mal_npm_packages package as pkg OUTPUT id reference
-| where isnotnull(id)
+| eval detection="Malicious NPM package detected"
+| table _time host user targetfilename npm_pkg id reference detection
